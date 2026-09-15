@@ -18,6 +18,8 @@ services:
     container_name: todo-app
     ports:
       - "8080:8080"
+    entrypoint: sh -c "echo '=== ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ ===' && env | grep SPRING && echo '=== СОДЕРЖИМОЕ application.properties ===' && (cat /app/BOOT-INF/classes/application.properties || cat /app/application.properties || echo 'ФАЙЛ НЕ НАЙДЕН')"
+
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/todo_db
       SPRING_DATASOURCE_USERNAME: postgres

@@ -17,4 +17,7 @@ COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080
 
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+USER appuser
+
 ENTRYPOINT ["java", "-jar", "app.jar"]

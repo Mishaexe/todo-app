@@ -26,10 +26,8 @@ jobs:
           --health-retries 10
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v4
-
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -50,11 +48,40 @@ jobs:
           JWT_SECRET: mySuperSecretKeyForJWTTokenGenerationThatIsLongEnough1234567890!
           JWT_EXPIRATION: 86400000
 
+      - name: Checkstyle code analysis
+        run: mvn checkstyle:check
+        continue-on-error: true
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=Mishaexe_todo-app
+            -Dsonar.organization=mishaexe
+      - name: Upload Checkstyle report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-report
+          path: target/checkstyle-result.xml
+
+      - name: Notify Telegram on failure
+        if: failure()
+        run: |
+          MESSAGE="🚨 *Сборка упала!*%0A%0A Репозиторий: ${{ github.repository }}%0A🌿 Ветка: ${{ github.ref_name }}%0A👤 Автор: ${{ github.actor }}%0A🔗 Коммит: ${{ github.sha }}"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="HTML"
+
       - name: Show test results
         if: always()
         run: |
           echo "=== РЕЗУЛЬТАТЫ ТЕСТОВ ==="
-          cat target/surefire-reports/*.txt || true
+          cat target/surefire-reports/*.txt || echo "Отчёты не найдены"
 
       - name: Upload coverage report
         if: always()
@@ -62,7 +89,6 @@ jobs:
         with:
           name: coverage-report
           path: target/site/jacoco/
-
 
   build-and-push:
     needs: test
@@ -94,3 +120,12 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/todo-app:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Notify Telegram on success
+        if: success()
+        run: |
+          MESSAGE="✅ *Сборка успешна!*%0A%0A📦 Репозиторий: ${{ github.repository }}%0A🌿 Ветка: ${{ github.ref_name }}%0A Образ: mishadocker141/todo-app:latest"
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="HTML"

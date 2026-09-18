@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af67726
 
       - name: Set up JDK 21
-        uses: actions/setup-java@3a474b5cbdf2408071eba64a9691bd3749709692
+        uses: actions/setup-java@7a6d958956b4ac4a0f4c3d251d40b476976b478c
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -48,12 +48,8 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_EXPIRATION: 86400000
 
-      - name: Checkstyle code analysis
-        run: mvn checkstyle:check
-        continue-on-error: true
-
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@49e6cd3b187936a73b8280d59ffd9da69df63b71
+        uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -61,6 +57,12 @@ jobs:
           args: >
             -Dsonar.projectKey=Mishaexe_todo-app
             -Dsonar.organization=mishaexe
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+      - name: Checkstyle code analysis
+        run: mvn checkstyle:check
+        continue-on-error: true
+
       - name: Upload Checkstyle report
         if: always()
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
@@ -99,7 +101,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af67726
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@53851d14592bedcffcf25ea515637cff71ef929a

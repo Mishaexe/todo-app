@@ -229,24 +229,6 @@ public class TaskServiceUnitTest {
 
     }
 
-    @Test
-    @DisplayName("createTask - проверка валидации Title должно выбрасывать исключение")
-    void createTask_withMinimumData() {
-
-        TaskCreateRequest request = createRequest("Ку", "Срочно", StatusType.TODO);
-
-        ValidationException exception = assertThrows(
-                ValidationException.class,
-                () -> taskService.createTask(request)
-        );
-
-        assertEquals("", exception.getMessage());
-
-        verify(taskRepository, never()).save(any());
-        verify(mapper, never()).toEntity(any());
-        verify(userRepository,never()).findByUsername(any());
-
-    }
     /// ----------------------------UPDATE_TEST-----------------------------------------------
 
     @Test

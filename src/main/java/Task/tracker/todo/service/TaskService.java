@@ -7,6 +7,7 @@ import Task.tracker.todo.entity.StatusType;
 import Task.tracker.todo.entity.Task;
 import Task.tracker.todo.entity.User;
 import Task.tracker.todo.exception.TaskNotFoundException;
+import Task.tracker.todo.exception.UnauthorizedException;
 import Task.tracker.todo.exception.UserNotFoundException;
 import Task.tracker.todo.mapper.TaskMapper;
 import Task.tracker.todo.repository.TaskRepository;
@@ -14,6 +15,8 @@ import Task.tracker.todo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,12 +30,30 @@ public class TaskService {
     private final UserRepository userRepository;
 
     private User getCurrentUser() {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new UnauthorizedException("Пользователь не авторизован");
+        }
+
+        String username = authentication.getName();
+
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден: " + username));
     }
     @Transactional
     public TaskResponse createTask(TaskCreateRequest request) {
+
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Title cannot be empty");
+        }
+
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
+
         User user = getCurrentUser();
 
         Task task = mapper.toEntity(request);

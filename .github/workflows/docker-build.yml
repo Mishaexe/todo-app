@@ -70,10 +70,13 @@ jobs:
 
       - name: Notify Telegram on failure
         if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           MESSAGE="🚨 *Сборка упала!*%0A%0A Репозиторий: ${{ github.repository }}%0A🌿 Ветка: ${{ github.ref_name }}%0A👤 Автор: ${{ github.actor }}%0A🔗 Коммит: ${{ github.sha }}"
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d text="$MESSAGE" \
             -d parse_mode="HTML"
 
@@ -123,9 +126,12 @@ jobs:
 
       - name: Notify Telegram on success
         if: success()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           MESSAGE="✅ *Сборка успешна!*%0A%0A📦 Репозиторий: ${{ github.repository }}%0A🌿 Ветка: ${{ github.ref_name }}%0A Образ: mishadocker141/todo-app:latest"
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d text="$MESSAGE" \
             -d parse_mode="HTML"

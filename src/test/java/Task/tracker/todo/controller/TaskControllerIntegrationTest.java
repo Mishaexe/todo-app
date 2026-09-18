@@ -56,6 +56,15 @@ public class TaskControllerIntegrationTest {
         return userRepository.save(user);
     }
 
+    private Task createAndSaveTask(String taskName, String description, StatusType statusType, User user) {
+        Task task = new Task();
+        task.setTitle(taskName);
+        task.setDescription(description);
+        task.setStatus(statusType);
+        task.setUser(user);
+        return taskRepository.save(task);
+    }
+
     @Test
     @DisplayName("Создание задачи должно вернуть 201 и сохраненную задачу")
     void createTask_shouldReturn201AndSavedTask() throws Exception {
@@ -84,22 +93,12 @@ public class TaskControllerIntegrationTest {
 
         User savedUser = createAndSaveUser("testuser_getall");
 
-        Task task1 = new Task();
-        task1.setTitle("Задача 1");
-        task1.setDescription("Описание 1");
-        task1.setStatus(StatusType.TODO);
-        task1.setUser(savedUser);
+        Task task1 = createAndSaveTask("Задача 1", "Описание 1", StatusType.TODO, savedUser);
 
-        Task task2 = new Task();
-        task2.setTitle("Задача 2");
-        task2.setDescription("Описание 2");
-        task2.setStatus(StatusType.IN_PROGRESS);
-        task2.setUser(savedUser);
-
-        taskRepository.saveAll(List.of(task1, task2));
+        Task task2 = createAndSaveTask("Задача 2", "Описание 2", StatusType.IN_PROGRESS, savedUser);
 
         mockMvc.perform(get("/api/tasks")
-                .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername()))))
+                        .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(2))
                 .andExpect(jsonPath("$.totalElements").value(2))
@@ -111,12 +110,7 @@ public class TaskControllerIntegrationTest {
     void getTaskById_shouldReturnTask() throws Exception {
         User savedUser = createAndSaveUser("testuser_getid");
 
-        Task task = new Task();
-        task.setTitle("Найти меня");
-        task.setDescription("Я существую и принадлежу пользователю");
-        task.setStatus(StatusType.TODO);
-        task.setUser(savedUser);
-        Task savedTask = taskRepository.save(task);
+        Task savedTask = createAndSaveTask("Найти меня", "Я существую и принадлежу пользователю", StatusType.TODO, savedUser);
 
         mockMvc.perform(get("/api/tasks/{id}", savedTask.getId())
                         .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername()))))
@@ -142,12 +136,7 @@ public class TaskControllerIntegrationTest {
     void updateTask_shouldReturnUpdatedTask() throws Exception {
         User savedUser = createAndSaveUser("testuser_update");
 
-        Task task = new Task();
-        task.setTitle("Старое название");
-        task.setDescription("Старое описание");
-        task.setStatus(StatusType.TODO);
-        task.setUser(savedUser);
-        Task savedTask = taskRepository.save(task);
+        Task savedTask = createAndSaveTask("Старое название", "Старое описание", StatusType.TODO, savedUser);
 
         TaskUpdateRequest request = new TaskUpdateRequest();
         request.setTitle("Новое название");
@@ -168,13 +157,7 @@ public class TaskControllerIntegrationTest {
     void deleteTask_shouldReturn204() throws Exception {
         User savedUser = createAndSaveUser("testuser_delete");
 
-        Task task = new Task();
-        task.setTitle("Удали меня");
-        task.setDescription("Пожалуйста, описание длинное");
-        task.setStatus(StatusType.TODO);
-        task.setUser(savedUser);
-
-        Task savedTask = taskRepository.save(task);
+        Task savedTask = createAndSaveTask("Удали меня", "Пожалуйста, описание длинное", StatusType.TODO, savedUser);
 
         mockMvc.perform(delete("/api/tasks/{id}", savedTask.getId())
                         .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername())))
@@ -189,26 +172,11 @@ public class TaskControllerIntegrationTest {
     void getTasksByStatus_shouldReturnFilteredTasks() throws Exception {
         User savedUser = createAndSaveUser("testuser_status");
 
-        Task task1 = new Task();
-        task1.setTitle("TODO задача");
-        task1.setDescription("Описание задачи 1");
-        task1.setStatus(StatusType.TODO);
-        task1.setUser(savedUser);
+        Task task1 = createAndSaveTask("TODO задача", "Описание задачи 1", StatusType.TODO, savedUser);
 
+        Task task2 = createAndSaveTask("IN_PROGRESS задача", "Описание задачи 2", StatusType.IN_PROGRESS, savedUser);
 
-        Task task2 = new Task();
-        task2.setTitle("IN_PROGRESS задача");
-        task2.setDescription("Описание задачи 2");
-        task2.setStatus(StatusType.IN_PROGRESS);
-        task2.setUser(savedUser);
-
-        Task task3 = new Task();
-        task3.setTitle("Еще TODO");
-        task3.setDescription("Описание задачи 3");
-        task3.setStatus(StatusType.TODO);
-        task3.setUser(savedUser);
-
-        taskRepository.saveAll(List.of(task1, task2, task3));
+        Task task3 = createAndSaveTask("Еще TODO", "Описание задачи 3", StatusType.TODO, savedUser);
 
         mockMvc.perform(get("/api/tasks/by-status")
                         .param("status", "TODO")
@@ -276,19 +244,9 @@ public class TaskControllerIntegrationTest {
     void getTasksAll_with_Pagination() throws Exception {
         User savedUser = createAndSaveUser("testuser_page");
 
-        Task task1 = new Task();
-        task1.setTitle("Первая задача");
-        task1.setDescription("Описание первой задачи");
-        task1.setStatus(StatusType.TODO);
-        task1.setUser(savedUser);
+        Task task1 = createAndSaveTask("Первая задача", "Описание первой задачи", StatusType.TODO, savedUser);
 
-        Task task2 = new Task();
-        task2.setTitle("Вторая задача");
-        task2.setDescription("Описание второй задачи");
-        task2.setStatus(StatusType.IN_PROGRESS);
-        task2.setUser(savedUser);
-
-        taskRepository.saveAll(List.of(task1,task2));
+        Task task2 = createAndSaveTask("Вторая задача", "Описание второй задачи", StatusType.IN_PROGRESS, savedUser);
 
         mockMvc.perform(get("/api/tasks")
                         .param("page", "0")
@@ -316,9 +274,9 @@ public class TaskControllerIntegrationTest {
         request.setStatus(StatusType.TODO);
 
         mockMvc.perform(post("/api/tasks")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-                                .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername())))
                 )
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("Задача пользователя"));

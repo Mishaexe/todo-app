@@ -24,4 +24,6 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT DISTINCT t FROM Task t LEFT JOIN FETCH t.user WHERE t.user.id = :userId")
     List<Task> findByUserIdWithUser(@Param("userId") Long userId);
+
+    List<Task> findByTitle(String title);
 }

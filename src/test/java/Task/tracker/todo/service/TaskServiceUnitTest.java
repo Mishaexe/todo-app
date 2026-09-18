@@ -7,9 +7,12 @@ import Task.tracker.todo.entity.StatusType;
 import Task.tracker.todo.entity.Task;
 import Task.tracker.todo.entity.User;
 import Task.tracker.todo.exception.TaskNotFoundException;
+import Task.tracker.todo.exception.UnauthorizedException;
+import Task.tracker.todo.exception.UserNotFoundException;
 import Task.tracker.todo.mapper.TaskMapper;
 import Task.tracker.todo.repository.TaskRepository;
 import Task.tracker.todo.repository.UserRepository;
+import jakarta.xml.bind.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -65,19 +68,44 @@ public class TaskServiceUnitTest {
 
     }
 
-    /// ------------------------------------------GET-TEST-------------------------------------------
+    private User createUser(long id, String name) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(name);
+        mockTask.setUser(user);
+        return user;
+    }
 
-    @Test
-    @DisplayName("getTaskById должен вернуть задачу, если она существует и принадлежит пользователю")
-    void getTaskById_Success() {
-
+    private void withMockUser(String username, Runnable test) {
         Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("testUser");
+        when(authentication.getName()).thenReturn(username);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn(username);
+
+
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
 
         try (MockedStatic<SecurityContextHolder> mockedSecurity = Mockito.mockStatic(SecurityContextHolder.class)) {
             mockedSecurity.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            test.run();
+        }
+    }
+
+    private TaskCreateRequest createRequest(String setTitle, String setDescription, StatusType statusType) {
+        TaskCreateRequest request = new TaskCreateRequest();
+        request.setTitle(setTitle);
+        request.setDescription(setDescription);
+        request.setStatus(statusType);
+        return request;
+    }
+
+    /// ------------------------------------------GET-TEST-------------------------------------------
+
+    @Test
+    @DisplayName("getTaskById должен вернуть задачу, если она существует и принадлежит пользователю")
+    void getTaskById_Success() {
+        withMockUser("testUser", () -> {
 
             when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(mockUser));
             when(taskRepository.findById(100L)).thenReturn(Optional.of(mockTask));
@@ -92,50 +120,40 @@ public class TaskServiceUnitTest {
             verify(userRepository, times(1)).findByUsername("testUser");
             verify(taskRepository, times(1)).findById(100L);
             verify(mapper, times(1)).toResponse(mockTask);
-        }
+        });
     }
 
     @Test
     @DisplayName("getTaskById должен выбросить исключение, если задача не найдена")
     void getTaskById_TaskNotFound_ThrowsException() {
 
-            when(taskRepository.findById(999L)).thenReturn(Optional.empty());
+        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
 
-            TaskNotFoundException exception = assertThrows(
-                    TaskNotFoundException.class,
-                    () -> taskService.getTaskById(999L)
-            );
+        TaskNotFoundException exception = assertThrows(
+                TaskNotFoundException.class,
+                () -> taskService.getTaskById(999L)
+        );
 
-            assertEquals("Задача с id 999 не найдена", exception.getMessage());
+        assertEquals("Задача с id 999 не найдена", exception.getMessage());
 
-            verify(taskRepository, times(1)).findById(999L);
-            verify(mapper, never()).toResponse(any());
+        verify(taskRepository, times(1)).findById(999L);
+        verify(mapper, never()).toResponse(any());
 
     }
 
     /// ------------------------------CREATE-TEST----------------------------------------
 
     @Test
-    @DisplayName("createTask Должен создать задачу и вернуть TaskResponse")
+    @DisplayName("createTask Должен создать задачу и вернуть TaskResponse (201) ")
     void createTask_Success() {
 
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("testUser");
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-
-        try (MockedStatic<SecurityContextHolder> mockedSecurity = Mockito.mockStatic(SecurityContextHolder.class)) {
-            mockedSecurity.when(SecurityContextHolder::getContext).thenReturn(securityContext);
-
+        withMockUser("testUser", () -> {
             when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(mockUser));
             when(mapper.toEntity(any(TaskCreateRequest.class))).thenReturn(mockTask);
             when(taskRepository.save(mockTask)).thenReturn(mockTask);
             when(mapper.toResponse(mockTask)).thenReturn(mockResponse);
 
-            TaskCreateRequest request = new TaskCreateRequest();
-            request.setTitle("Купить молоко");
-            request.setDescription("Срочно");
-            request.setStatus(StatusType.TODO);
+            TaskCreateRequest request = createRequest("Купить молоко", "Срочно", StatusType.TODO);
 
             TaskResponse result = taskService.createTask(request);
 
@@ -147,22 +165,95 @@ public class TaskServiceUnitTest {
             verify(mapper, times(1)).toEntity(request);
             verify(taskRepository, times(1)).save(mockTask);
             verify(mapper, times(1)).toResponse(mockTask);
-        }
+        });
     }
 
+    @Test
+    @DisplayName("Create Task с пустым title должен выбросить исключение валидации (400) ")
+    void createTask_whenTitleIsEmpty_shouldThrowValidationException() {
+
+        TaskCreateRequest request = createRequest("", "Срочно", StatusType.TODO);
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.createTask(request));
+
+        verify(taskRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createTask — пользователь не найден в БД (400) ")
+    void createTask_whenUserNotFound_shouldThrowException() {
+        withMockUser("Erw", () -> {
+
+            when(userRepository.findByUsername("Erw")).thenReturn(Optional.empty());
+
+            TaskCreateRequest request = createRequest("Milk", "Срочно", StatusType.TODO);
+
+            assertThrows(UserNotFoundException.class,
+                    () -> taskService.createTask(request)
+                    );
+
+            verify(taskRepository, never()).save(any());
+        });
+    }
+
+    @Test
+    @DisplayName("createTask - пользователь не авторизован (401) ")
+    void createTask_whenNotAuthenticated_shouldThrowException() {
+
+        SecurityContextHolder.clearContext();
+
+        TaskCreateRequest request = createRequest("Milk", "Срочно", StatusType.TODO);
+
+        assertThrows(UnauthorizedException.class,
+                () -> taskService.createTask(request));
+
+        verify(taskRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createTask - status = null Должен выбрасывать исключение (400)")
+    void createTask_whenStatusIsNull_shouldThrowException() {
+
+            TaskCreateRequest request = createRequest("Купить молоко", "Срочно", null);
+
+            IllegalArgumentException exception = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> taskService.createTask(request)
+            );
+
+            assertEquals("Status cannot be null", exception.getMessage());
+
+            verify(taskRepository, never()).save(any());
+            verify(mapper, never()).toEntity(any());
+            verify(userRepository, never()).findByUsername(any());
+
+    }
+
+    @Test
+    @DisplayName("createTask - проверка валидации Title должно выбрасывать исключение")
+    void createTask_withMinimumData() {
+
+        TaskCreateRequest request = createRequest("Ку", "Срочно", StatusType.TODO);
+
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> taskService.createTask(request)
+        );
+
+        assertEquals("", exception.getMessage());
+
+        verify(taskRepository, never()).save(any());
+        verify(mapper, never()).toEntity(any());
+        verify(userRepository,never()).findByUsername(any());
+
+    }
     /// ----------------------------UPDATE_TEST-----------------------------------------------
 
     @Test
     @DisplayName("updateTask должен обновить задачу, если она существует и принадлежит пользователю")
     void updateTask_Success() {
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("testUser");
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
 
-        try (MockedStatic<SecurityContextHolder> mockedSecurity = Mockito.mockStatic(SecurityContextHolder.class)) {
-            mockedSecurity.when(SecurityContextHolder::getContext).thenReturn(securityContext);
-
+        withMockUser("testUser", () -> {
             TaskUpdateRequest updateRequest = new TaskUpdateRequest();
             updateRequest.setTitle("Новое название");
 
@@ -195,7 +286,7 @@ public class TaskServiceUnitTest {
             verify(mapper, times(1)).toResponse(mockTask);
 
             verify(taskRepository, never()).save(any());
-        }
+        });
     }
 
     @Test
@@ -224,19 +315,8 @@ public class TaskServiceUnitTest {
     @DisplayName("updateTask должен выбросить исключение, если задача не принадлежит текущему пользователю")
     void updateTask_WrongUser_ThrowsException() {
 
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("testUser");
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-
-        User otherUser = new User();
-        otherUser.setId(999L);
-        otherUser.setUsername("otherUser");
-        mockTask.setUser(otherUser);
-
-        try (MockedStatic<SecurityContextHolder> mockedSecurity = Mockito.mockStatic(SecurityContextHolder.class)) {
-            mockedSecurity.when(SecurityContextHolder::getContext).thenReturn(securityContext);
-
+        withMockUser("testUser", () -> {
+            User otherUser = createUser(999L, "otherUser");
             when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(mockUser));
             when(taskRepository.findById(100L)).thenReturn(Optional.of(mockTask));
 
@@ -248,7 +328,7 @@ public class TaskServiceUnitTest {
             );
 
             verify(mapper, never()).updateEntity(any(), any());
-        }
+        });
     }
 
     /// -----------------------------DELETE_TEST-------------------------------------
@@ -257,14 +337,7 @@ public class TaskServiceUnitTest {
     @DisplayName("deleteTask должен удалить задачу, если она существует и принадлежит пользователю")
     void deleteTask_Success() {
 
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("testUser");
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-
-        try (MockedStatic<SecurityContextHolder> mockedStatic = Mockito.mockStatic(SecurityContextHolder.class)) {
-            mockedStatic.when(SecurityContextHolder::getContext).thenReturn(securityContext);
-
+        withMockUser("testUser", () -> {
             when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(mockUser));
             when(taskRepository.findById(100L)).thenReturn(Optional.of(mockTask));
 
@@ -275,7 +348,7 @@ public class TaskServiceUnitTest {
             verify(userRepository, times(1)).findByUsername("testUser");
             verify(taskRepository, times(1)).findById(100L);
             verify(taskRepository, times(1)).delete(mockTask);
-        }
+        });
     }
 
     @Test
@@ -301,18 +374,9 @@ public class TaskServiceUnitTest {
     @DisplayName("deleteTask должен выбросить исключение, если задача не пренадлежит текущему пользователю")
     void deleteTask_WrongUser_ThrowsException() {
 
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getName()).thenReturn("testUser");
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
+        withMockUser("testUser", () -> {
 
-        User otherUser = new User();
-        otherUser.setId(999L);
-        otherUser.setUsername("otherUser");
-        mockTask.setUser(otherUser);
-
-        try(MockedStatic<SecurityContextHolder> mockedSecurity = Mockito.mockStatic(SecurityContextHolder.class)) {
-            mockedSecurity.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+            User otherUser = createUser(999L, "otherUser");
 
             when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(mockUser));
             when(taskRepository.findById(100L)).thenReturn(Optional.of(mockTask));
@@ -322,6 +386,6 @@ public class TaskServiceUnitTest {
             );
 
             verify(taskRepository, never()).delete(any());
-        }
+        });
     }
 }

@@ -1,6 +1,7 @@
 package Task.tracker.todo.auth;
 
 import Task.tracker.todo.entity.User;
+import Task.tracker.todo.exception.UserNotFoundException;
 import Task.tracker.todo.repository.UserRepository;
 import Task.tracker.todo.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,10 @@ public class AuthService {
 
     public AuthResponse register(AuthRequest request) {
 
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new IllegalArgumentException("cannot register with duplicated username");
+        }
+
         User user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -27,6 +32,7 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+
 
         var jwtToken = jwtService.generateToken(user);
         return AuthResponse.builder().token(jwtToken).build();
@@ -40,8 +46,8 @@ public class AuthService {
                 )
         );
 
-        var user = userRepository.findByUsername(request.getUsername()).orElseThrow();
-        var jwtToken = jwtService.generateToken(user);
+        var user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));        var jwtToken = jwtService.generateToken(user);
 
         return AuthResponse.builder().token(jwtToken).build();
     }

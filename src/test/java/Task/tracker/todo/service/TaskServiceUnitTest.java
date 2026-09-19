@@ -12,7 +12,6 @@ import Task.tracker.todo.exception.UserNotFoundException;
 import Task.tracker.todo.mapper.TaskMapper;
 import Task.tracker.todo.repository.TaskRepository;
 import Task.tracker.todo.repository.UserRepository;
-import jakarta.xml.bind.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,10 +21,12 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -139,6 +140,36 @@ public class TaskServiceUnitTest {
         verify(taskRepository, times(1)).findById(999L);
         verify(mapper, never()).toResponse(any());
 
+    }
+
+    @Test
+    @DisplayName("getTaskByStatus должен вернуть задачу, если она существует и принадлежит пользователю")
+    void getTaskByStatus_Success() {
+        withMockUser("testUser", () -> {
+
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<Task> taskPage = new PageImpl<>(List.of(mockTask), pageable, 1);
+
+            when(userRepository.findByUsername("testUser")).thenReturn(Optional.of(mockUser));
+
+            when(taskRepository.findByUserAndStatus(
+                    eq(mockUser),
+                    eq(StatusType.TODO),
+                    eq(pageable)
+            )).thenReturn(taskPage);
+
+            when(mapper.toResponse(mockTask)).thenReturn(mockResponse);
+
+            Page<TaskResponse> result = taskService.getTasksByStatus(StatusType.TODO, pageable);
+
+            assertNotNull(result);
+            assertEquals(1, result.getTotalElements());
+            assertEquals(StatusType.TODO, result.getContent().getFirst().getStatus());
+
+            verify(userRepository).findByUsername("testUser");
+            verify(taskRepository).findByUserAndStatus(mockUser, StatusType.TODO, pageable);
+            verify(mapper).toResponse(mockTask);
+        });
     }
 
     /// ------------------------------CREATE-TEST----------------------------------------

@@ -89,7 +89,7 @@
             <artifactId>spring-security-oauth2-resource-server</artifactId>
         </dependency>
 
-        <!-- JWT (JSON Web Token) - версия 0.12.5 (актуальная для Spring Boot 3) -->
+        <!-- JWT (JSON Web Token -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -108,7 +108,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Swagger / OpenAPI для Spring Boot 3.x -->
+        <!-- Swagger / OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -169,6 +169,16 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.12</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/dto/**</exclude>
+                        <exclude>**/entity/**</exclude>
+                        <exclude>**/mapper/**</exclude>
+                        <exclude>**/repository/**</exclude>
+                        <exclude>**/config/**</exclude>
+                        <exclude>**/TodoApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>

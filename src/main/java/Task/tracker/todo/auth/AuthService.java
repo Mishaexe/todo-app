@@ -33,9 +33,6 @@ public class AuthService {
                 .email(request.getUsername() + "@test.com")
                 .build();
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new BadCredentialsException("Неверный пароль");
-        }
 
         userRepository.save(user);
 

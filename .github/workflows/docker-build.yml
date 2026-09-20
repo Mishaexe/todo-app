@@ -59,7 +59,7 @@ jobs:
             -Dsonar.organization=mishaexe
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
             -Dsonar.exclusions=**/dto/**,**/entity/**,**/mapper/**,**/repository/**,**/config/**,**/TodoApplication.java,**/exception/**
-            -Dsonar.test.exclusions=**/test/**
+            -Dsonar.coverage.exclusions=**/test/**,**/*Test.java,**/*Tests.java
       - name: Checkstyle code analysis
         run: mvn checkstyle:check
         continue-on-error: true

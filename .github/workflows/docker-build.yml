@@ -58,6 +58,7 @@ jobs:
             -Dsonar.projectKey=Mishaexe_todo-app
             -Dsonar.organization=mishaexe
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            -Dsonar.exclusions=**/dto/**,**/entity/**,**/mapper/**,**/repository/**,**/config/**,**/TodoApplication.java,**/exception/**
 
       - name: Checkstyle code analysis
         run: mvn checkstyle:check

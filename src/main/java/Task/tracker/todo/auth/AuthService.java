@@ -6,6 +6,7 @@ import Task.tracker.todo.repository.UserRepository;
 import Task.tracker.todo.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,11 +26,16 @@ public class AuthService {
             throw new IllegalArgumentException("cannot register with duplicated username");
         }
 
+
         User user = User.builder()
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getUsername() + "@test.com")
                 .build();
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BadCredentialsException("Неверный пароль");
+        }
 
         userRepository.save(user);
 

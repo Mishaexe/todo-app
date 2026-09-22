@@ -40,10 +40,11 @@ public class User {
     private String password;
 
     @CreationTimestamp
-    @Column(updatable = false)
+    @Column(updatable = false, name = "created_at")
     private LocalDateTime createAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

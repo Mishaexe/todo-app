@@ -15,6 +15,12 @@ services:
     networks:
       - todo-network
 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d todo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   app:
     build: .
     container_name: todo-app
@@ -25,7 +31,8 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 123
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: "true"
       JWT_SECRET: mySuperSecretKeyForJWTTokenGenerationThatIsLongEnough1234567890!
       JWT_EXPIRATION: 86400000
     depends_on:

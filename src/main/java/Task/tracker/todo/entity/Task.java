@@ -27,7 +27,7 @@ public class Task {
     private String title;
 
     @NotBlank(message = "Описание должно присутсвовать")
-    @Size(min = 8, message = "Описание должно быть не менее 10 символов")
+    @Size(min = 10, message = "Описание должно быть не менее 10 символов")
     private String description;
 
     @NotNull(message = "Статус должен быть")

@@ -20,6 +20,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/tasks")
 @RequiredArgsConstructor
@@ -42,7 +44,7 @@ public class TaskController {
 
     @Operation(summary = "Получить все задачи", description = "Возвращает paginated список задач текущего пользователя")
     @GetMapping
-    public Page<TaskResponse> getAllTasks(
+    public List<TaskResponse> getAllTasks(
             @ParameterObject
             @Parameter(description = "Параметры пагинации: page, size, sort")
             @PageableDefault(size = 10)Pageable pageable) {
@@ -51,7 +53,7 @@ public class TaskController {
 
     @Operation(summary = "Получить задачи текущего пользователя по статусу", description = "Фильтрует задачи текущего пользователя по статусу")
     @GetMapping("/by-status")
-    public Page<TaskResponse> getTasksByStatus(
+    public List<TaskResponse> getTasksByStatus(
             @Parameter(description = "типы статуса: TODO, IN_PROGRESS, DONE")
             @RequestParam StatusType status,
             @ParameterObject

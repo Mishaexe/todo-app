@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@TestPropertySource(properties = "spring.cache.type=none")
 public class TaskControllerIntegrationTest {
 
     @Autowired
@@ -88,19 +90,17 @@ public class TaskControllerIntegrationTest {
     @Test
     @DisplayName("Получение всех задач должно вернуть страницу со список")
     void getAllTasks_shouldReturnListOfTasks() throws Exception {
-
         User savedUser = createAndSaveUser("testuser_getall");
 
         Task task1 = createAndSaveTask("Задача 1", "Описание 1", StatusType.TODO, savedUser);
-
         Task task2 = createAndSaveTask("Задача 2", "Описание 2", StatusType.IN_PROGRESS, savedUser);
 
         mockMvc.perform(get("/api/tasks")
                         .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(2))
-                .andExpect(jsonPath("$.totalElements").value(2))
-                .andExpect(jsonPath("$.totalPages").value(1));
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("Задача 1"))
+                .andExpect(jsonPath("$[1].title").value("Задача 2"));
     }
 
     @Test
@@ -171,18 +171,16 @@ public class TaskControllerIntegrationTest {
         User savedUser = createAndSaveUser("testuser_status");
 
         Task task1 = createAndSaveTask("TODO задача", "Описание задачи 1", StatusType.TODO, savedUser);
-
         Task task2 = createAndSaveTask("IN_PROGRESS задача", "Описание задачи 2", StatusType.IN_PROGRESS, savedUser);
-
         Task task3 = createAndSaveTask("Еще TODO", "Описание задачи 3", StatusType.TODO, savedUser);
 
         mockMvc.perform(get("/api/tasks/by-status")
                         .param("status", "TODO")
-                        .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername())))
-                )
+                        .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(2))
-                .andExpect(jsonPath("$.totalElements").value(2));
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("TODO задача"))
+                .andExpect(jsonPath("$[1].title").value("Еще TODO"));
     }
 
     @Test
@@ -228,12 +226,10 @@ public class TaskControllerIntegrationTest {
         User savedUser = createAndSaveUser("testuser_empty");
 
         mockMvc.perform(get("/api/tasks")
-                        .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername())))
-                )
+                        .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername()))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isEmpty())
-                .andExpect(jsonPath("$.totalElements").value(0))
-                .andExpect(jsonPath("$.totalPages").value(0));
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
 
@@ -243,7 +239,6 @@ public class TaskControllerIntegrationTest {
         User savedUser = createAndSaveUser("testuser_page");
 
         Task task1 = createAndSaveTask("Первая задача", "Описание первой задачи", StatusType.TODO, savedUser);
-
         Task task2 = createAndSaveTask("Вторая задача", "Описание второй задачи", StatusType.IN_PROGRESS, savedUser);
 
         mockMvc.perform(get("/api/tasks")
@@ -253,11 +248,9 @@ public class TaskControllerIntegrationTest {
                         .with(jwt().jwt(jwtBuilder -> jwtBuilder.claim("sub", savedUser.getUsername())))
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(2))
-                .andExpect(jsonPath("$.totalElements").value(2))
-                .andExpect(jsonPath("$.totalPages").value(1))
-                .andExpect(jsonPath("$.first").value(true))
-                .andExpect(jsonPath("$.last").value(true));
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").exists())
+                .andExpect(jsonPath("$[1].title").exists());
     }
 
     @Test

@@ -4,9 +4,11 @@ import Task.tracker.todo.entity.User;
 import Task.tracker.todo.exception.UserNotFoundException;
 import Task.tracker.todo.security.CustomUserDetailsService;
 import Task.tracker.todo.security.JwtService;
+import Task.tracker.todo.security.RateLimitService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -39,6 +41,11 @@ public class AuthControllerTest {
     @MockBean
     private CustomUserDetailsService customUserDetailsService;
 
+    @MockBean
+    private RateLimitService rateLimitService;
+
+    @MockBean
+    private RedissonClient redissonClient;
     @Test
     @DisplayName("POST /api/auth/register с валидными данными должен вернуть 200 и вернуть токен")
     void register_withValidData_shouldReturn200AndToken() throws Exception {

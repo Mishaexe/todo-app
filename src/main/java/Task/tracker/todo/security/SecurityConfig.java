@@ -3,6 +3,7 @@ package Task.tracker.todo.security;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -31,7 +32,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, @Nullable RateLimitFilter rateLimitFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
@@ -65,7 +66,9 @@ public class SecurityConfig {
                             );
                         })
                 );
-
+        if (rateLimitFilter != null) {
+            http.addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+        }
         return http.build();
     }
 

@@ -8,11 +8,13 @@ import io.github.bucket4j.redis.redisson.cas.RedissonBasedProxyManager;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.command.CommandAsyncExecutor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
 @Service
+@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis", matchIfMissing = true)
 public class RateLimitService {
 
     private final ProxyManager<String> proxyManager;

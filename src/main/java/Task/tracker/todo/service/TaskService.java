@@ -13,6 +13,8 @@ import Task.tracker.todo.mapper.TaskMapper;
 import Task.tracker.todo.repository.TaskRepository;
 import Task.tracker.todo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,8 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final TaskMapper mapper;
     private final UserRepository userRepository;
+
+    private static final Logger log = LoggerFactory.getLogger(TaskService.class);
 
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -66,11 +70,13 @@ public class TaskService {
         }
 
         User user = getCurrentUser();
-
         Task task = mapper.toEntity(request);
         task.setUser(user);
-
         Task savedTask = taskRepository.save(task);
+
+        log.info("Task created | id={} | title='{}' | user= '{}'",
+                savedTask.getId(), savedTask, user.getUsername());
+
         return mapper.toResponse(savedTask);
     }
 
@@ -132,5 +138,7 @@ public class TaskService {
            throw new TaskNotFoundException("Задача не найдена");
        }
        taskRepository.delete(task);
+
+       log.info("Task deleted | id={} | user='{}'", id, currentUser.getUsername());
     }
 }

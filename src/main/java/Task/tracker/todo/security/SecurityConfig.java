@@ -25,14 +25,18 @@ public class SecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final RateLimitFilter rateLimitFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, CustomUserDetailsService userDetailsService, RateLimitFilter rateLimitFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthFilter,
+            CustomUserDetailsService userDetailsService,
+            @Nullable RateLimitFilter rateLimitFilter
+    ) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
         this.rateLimitFilter = rateLimitFilter;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, @Nullable RateLimitFilter rateLimitFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
@@ -50,25 +54,21 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.sendError(
-                                    HttpServletResponse.SC_UNAUTHORIZED,
-                                    "Требуется аутентификация. Предоставьте валидный JWT токен."
-                            );
-                        })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.sendError(
-                                    HttpServletResponse.SC_FORBIDDEN,
-                                    "Доступ запрещен. Недостаточно прав."
-                            );
-                        })
-                );
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
         if (rateLimitFilter != null) {
-            http.addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+            http.addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
         }
+
+        http.exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Требуется аутентификация. Предоставьте валидный JWT токен.");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Доступ запрещен. Недостаточно прав.");
+                })
+        );
+
         return http.build();
     }
 
@@ -86,7 +86,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception{
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 }

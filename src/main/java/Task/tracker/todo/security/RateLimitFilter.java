@@ -23,7 +23,7 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis", matchIfMissing = true)
+@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
@@ -92,7 +92,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setHeader("X-RateLimit-Limit", String.valueOf(limit));
         response.setHeader("X-RateLimit-Remaining", String.valueOf(remaining));
-        response.setHeader("Retry-After", "3600"); // Через час сбросится
+        response.setHeader("Retry-After", "3600");
 
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("status", 429);

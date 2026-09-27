@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 
 @Service
-@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis", matchIfMissing = true)
+@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
 public class RateLimitService {
 
     private final ProxyManager<String> proxyManager;

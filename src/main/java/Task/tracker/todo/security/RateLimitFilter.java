@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -31,6 +30,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final RateLimitService rateLimitService;
     private final ObjectMapper objectMapper;
 
+    RateLimitFilter(RateLimitService rateLimitService, ObjectMapper objectMapper) {
+        this.rateLimitService = rateLimitService;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {

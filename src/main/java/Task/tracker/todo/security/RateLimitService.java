@@ -24,6 +24,7 @@ public class RateLimitService {
         this.proxyManager = RedissonBasedProxyManager.builderFor(commandExecutor).build();
     }
 
+
     public Bucket resolveBucket(String username) {
         String key = "rate-limit:general:" + username;
         return proxyManager.builder().build(key, this::createGeneralBucketConfig);
